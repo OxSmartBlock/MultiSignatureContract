@@ -262,10 +262,139 @@ contract TestMultiSig is Test {
         }
         vm.prank(adminsAddress[dynamicVoter]);
         multiSig.voteOnWithdrawalProposal(proposalId, true);
+
         bool voted = multiSig.getAddressAlreadyVoted(
             proposalId,
             adminsAddress[dynamicVoter]
         );
+        MultiSig.WithdrawalProposal memory currentProposal = multiSig
+            .getWithdrawalProposal(proposalId);
+
         assertEq(voted, true);
+        assertEq(currentProposal.yesVote[0], adminsAddress[dynamicVoter]);
+    }
+
+    function testCannotVoteTwice(uint256 _addressIndex) public {
+        uint256 index = bound(_addressIndex, 0, adminsAddress.length - 1);
+        address sender = adminsAddress[index];
+        tokenAdd(sender);
+        depositToken(sender, DEPOSIT_AMOUNT);
+        proposeWithdrawal(sender);
+        bytes32 proposalId = multiSig.getActiveWithdrawalProposal();
+        uint256 dynamicVoter;
+        if (index == 2) {
+            dynamicVoter = index - 1;
+        } else {
+            dynamicVoter = index + 1;
+        }
+        vm.startPrank(adminsAddress[dynamicVoter]);
+
+        multiSig.voteOnWithdrawalProposal(proposalId, true);
+        vm.expectRevert(MultiSig.MultiSig__AdressAlreadyVoted.selector);
+        multiSig.voteOnWithdrawalProposal(proposalId, false);
+        vm.stopPrank();
+    }
+
+    function testRevertOnNoneProposerResolve() public {
+        tokenAdd(adminsAddress[0]);
+        depositToken(adminsAddress[0], DEPOSIT_AMOUNT);
+        proposeWithdrawal(adminsAddress[0]);
+        bytes32 latestProposalId = multiSig.getActiveWithdrawalProposal();
+        vm.expectRevert(MultiSig.MultiSig__OnlyProposerAllowed.selector);
+        vm.prank(adminsAddress[1]);
+        multiSig.resolveWithdrawalProposal(latestProposalId);
+    }
+
+    function testVotingTimeStillOpen() public {
+        tokenAdd(adminsAddress[0]);
+        depositToken(adminsAddress[0], DEPOSIT_AMOUNT);
+        proposeWithdrawal(adminsAddress[0]);
+        bytes32 latestProposalId = multiSig.getActiveWithdrawalProposal();
+        vm.expectRevert(MultiSig.MultiSig__ProposalWaitTimeNotOver.selector);
+        vm.prank(adminsAddress[0]);
+        multiSig.resolveWithdrawalProposal(latestProposalId);
+    }
+
+    function testAllAdminsNotVoted() public {
+        tokenAdd(adminsAddress[0]);
+        depositToken(adminsAddress[0], DEPOSIT_AMOUNT);
+        proposeWithdrawal(adminsAddress[0]);
+        bytes32 latestProposalId = multiSig.getActiveWithdrawalProposal();
+        vm.warp(block.timestamp + 3 days);
+        vm.expectRevert(MultiSig.MultiSig__AllAdminsNotVoted.selector);
+        vm.prank(adminsAddress[0]);
+        multiSig.resolveWithdrawalProposal(latestProposalId);
+    }
+
+    function testYesVotePassed() public {
+        uint256 startingBalance = ERC20Mock(mockToken).balanceOf(
+            CHARITY_RECEIVER
+        );
+        tokenAdd(adminsAddress[0]);
+        depositToken(adminsAddress[0], DEPOSIT_AMOUNT);
+        proposeWithdrawal(adminsAddress[0]);
+        bytes32 latestProposalId = multiSig.getActiveWithdrawalProposal();
+        vm.prank(adminsAddress[1]);
+        multiSig.voteOnWithdrawalProposal(latestProposalId, true);
+        vm.prank(adminsAddress[2]);
+        multiSig.voteOnWithdrawalProposal(latestProposalId, true);
+        vm.warp(block.timestamp + 3 days);
+        vm.prank(adminsAddress[0]);
+        multiSig.resolveWithdrawalProposal(latestProposalId);
+        uint256 expectedBalance = startingBalance + DEPOSIT_AMOUNT;
+        uint256 resultBalance = ERC20Mock(mockToken).balanceOf(
+            CHARITY_RECEIVER
+        );
+        MultiSig.WithdrawalProposal memory proposal = multiSig
+            .getWithdrawalProposal(latestProposalId);
+        bool activeProposal = multiSig.getIsThereActiveProposal();
+        assertEq(expectedBalance, resultBalance);
+        assertEq(multiSig.getTokenBalanceInContract(mockToken), 0);
+        assertEq(proposal.isProposalPassed, true);
+        assertEq(activeProposal, false);
+    }
+
+    function testNoVotePassed() public {
+        uint256 startingBalance = ERC20Mock(mockToken).balanceOf(
+            CHARITY_RECEIVER
+        );
+        tokenAdd(adminsAddress[0]);
+        depositToken(adminsAddress[0], DEPOSIT_AMOUNT);
+        proposeWithdrawal(adminsAddress[0]);
+        bytes32 latestProposalId = multiSig.getActiveWithdrawalProposal();
+        vm.prank(adminsAddress[1]);
+        multiSig.voteOnWithdrawalProposal(latestProposalId, false);
+        vm.prank(adminsAddress[2]);
+        multiSig.voteOnWithdrawalProposal(latestProposalId, false);
+        vm.warp(block.timestamp + 3 days);
+        vm.prank(adminsAddress[0]);
+        multiSig.resolveWithdrawalProposal(latestProposalId);
+        assertEq(
+            startingBalance,
+            ERC20Mock(mockToken).balanceOf(CHARITY_RECEIVER)
+        );
+        assertEq(multiSig.getTokenBalanceInContract(mockToken), DEPOSIT_AMOUNT);
+    }
+
+    function testMixedVoting() public {
+        uint256 startingBalance = ERC20Mock(mockToken).balanceOf(
+            CHARITY_RECEIVER
+        );
+        tokenAdd(adminsAddress[0]);
+        depositToken(adminsAddress[0], DEPOSIT_AMOUNT);
+        proposeWithdrawal(adminsAddress[0]);
+        bytes32 latestProposalId = multiSig.getActiveWithdrawalProposal();
+        vm.prank(adminsAddress[1]);
+        multiSig.voteOnWithdrawalProposal(latestProposalId, true);
+        vm.prank(adminsAddress[2]);
+        multiSig.voteOnWithdrawalProposal(latestProposalId, false);
+        vm.warp(block.timestamp + 3 days);
+        vm.prank(adminsAddress[0]);
+        multiSig.resolveWithdrawalProposal(latestProposalId);
+        assertEq(
+            startingBalance,
+            ERC20Mock(mockToken).balanceOf(CHARITY_RECEIVER)
+        );
+        assertEq(multiSig.getTokenBalanceInContract(mockToken), DEPOSIT_AMOUNT);
     }
 }

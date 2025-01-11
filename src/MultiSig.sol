@@ -28,6 +28,9 @@ contract MultiSig {
     error MultiSig__AdressAlreadyVoted();
     error MultiSig__ProposalAlreadyPassed();
     error MultiSig__AddressCannotVoteOnProposedProposal();
+    error MultiSig__OnlyProposerAllowed();
+    error MultiSig__ProposalWaitTimeNotOver();
+    error MultiSig__AllAdminsNotVoted();
     //Event
 
     event NewWithdrawalProposal(
@@ -164,6 +167,30 @@ contract MultiSig {
         _;
     }
 
+    modifier revertIfNotProposer(bytes32 _proposalId) {
+        if (msg.sender != s_idToProposal[_proposalId].proposer) {
+            revert MultiSig__OnlyProposerAllowed();
+        }
+        _;
+    }
+    modifier revertVotingTimeIsOpen(bytes32 _proposalId) {
+        if (
+            (block.timestamp - s_idToProposal[_proposalId].timeProposed) <
+            PROPOSAL_WAIT_TIME
+        ) {
+            revert MultiSig__ProposalWaitTimeNotOver();
+        }
+        _;
+    }
+
+    modifier revertIfAllAdminNotVoted(bytes32 _proposalId) {
+        WithdrawalProposal memory proposal = s_idToProposal[_proposalId];
+        if ((proposal.yesVote.length + proposal.noVote.length) < 2) {
+            revert MultiSig__AllAdminsNotVoted();
+        }
+        _;
+    }
+
     /**
      *
      * @param _admins list of address allowed to sign transaction in the contract
@@ -253,6 +280,30 @@ contract MultiSig {
         }
         s_addressAlreadyVoted[_proposalId][msg.sender] = true;
         emit VotedOnWithdrawalProposal(msg.sender, _shouldPass);
+    }
+
+    function resolveWithdrawalProposal(
+        bytes32 _proposalId
+    )
+        public
+        revertIfNotProposer(_proposalId)
+        revertVotingTimeIsOpen(_proposalId)
+        revertIfAllAdminNotVoted(_proposalId)
+        revertOnProposalAlredyPassed(_proposalId)
+    {
+        WithdrawalProposal memory proposal = s_idToProposal[_proposalId];
+        s_idToProposal[_proposalId].isProposalPassed = true;
+        s_isThereActiveProposal = false;
+        if (proposal.yesVote.length > proposal.noVote.length) {
+            s_tokenToAmount[proposal.tokenContractAddress] -= proposal.amount;
+            bool isSuccess = IERC20(proposal.tokenContractAddress).transfer(
+                proposal.to,
+                proposal.amount
+            );
+            if (!isSuccess) {
+                revert MultiSig__TokenTransferFailed();
+            }
+        }
     }
 
     function addNewAssetAllowed(
