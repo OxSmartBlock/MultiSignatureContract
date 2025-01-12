@@ -1,8 +1,8 @@
 //SPDX-License-Identifier:MIT
 pragma solidity >=0.8.0 <0.9.0;
 import {Test, console} from "forge-std/Test.sol";
-import {MultiSig} from "../src/MultiSig.sol";
-import {DeployMultiSig} from "../script/DeployMultiSig.s.sol";
+import {MultiSig} from "../../src/MultiSig.sol";
+import {DeployMultiSig} from "../../script/DeployMultiSig.s.sol";
 import {ERC20Mock} from "@openzeppelin-contracts/contracts/mocks/token/ERC20Mock.sol";
 
 contract TestMultiSig is Test {
@@ -19,7 +19,7 @@ contract TestMultiSig is Test {
     address CHARITY_RECEIVER = makeAddr("charity");
 
     function setUp() external {
-        DeployMultiSig deployMultiSig = new DeployMultiSig();
+        DeployMultiSig deployMultiSig = new DeployMultiSig(expectedAdmins);
         (multiSig, adminsAddress) = deployMultiSig.run();
         ERC20Mock token = new ERC20Mock();
         mockToken = address(token);
