@@ -1,5 +1,6 @@
 //SPDX-License-Identifier:MIT
 pragma solidity >=0.8.0 <0.9.0;
+
 import {Test, console} from "forge-std/Test.sol";
 import {MultiSig} from "../../src/MultiSig.sol";
 import {DeployMultiSig} from "../../script/DeployMultiSig.s.sol";
@@ -47,19 +48,13 @@ contract TestMultiSig is Test {
     function proposeWithdrawal(address sender) internal {
         vm.prank(sender);
         multiSig.proposeWithdrawal(
-            address(mockToken),
-            CHARITY_RECEIVER,
-            DEPOSIT_AMOUNT,
-            "Funds need for charity donation"
+            address(mockToken), CHARITY_RECEIVER, DEPOSIT_AMOUNT, "Funds need for charity donation"
         );
     }
 
     function testAdminAddresses() public view {
         address[3] memory adminResult = multiSig.getAdmins();
-        assertEq(
-            keccak256(abi.encodePacked(adminResult)),
-            keccak256(abi.encodePacked(expectedAdmins))
-        );
+        assertEq(keccak256(abi.encodePacked(adminResult)), keccak256(abi.encodePacked(expectedAdmins)));
     }
 
     function testOnlyAnAdminCanAddToken() public {
@@ -83,9 +78,7 @@ contract TestMultiSig is Test {
     function testTokenDeposit(uint256 _addressIndex) public {
         uint256 index = bound(_addressIndex, 0, adminsAddress.length - 1);
         depositToken(adminsAddress[index], DEPOSIT_AMOUNT);
-        uint256 balance = multiSig.getTokenBalanceInContract(
-            address(mockToken)
-        );
+        uint256 balance = multiSig.getTokenBalanceInContract(address(mockToken));
         assertEq(balance, DEPOSIT_AMOUNT);
     }
 
@@ -106,10 +99,7 @@ contract TestMultiSig is Test {
         address sender = adminsAddress[index];
         tokenAdd(sender);
         vm.startPrank(sender);
-        ERC20Mock(address(mockToken)).approve(
-            address(multiSig),
-            DEPOSIT_AMOUNT
-        );
+        ERC20Mock(address(mockToken)).approve(address(multiSig), DEPOSIT_AMOUNT);
 
         vm.expectRevert(MultiSig.MultiSig__NotEnoughAllowance.selector);
         multiSig.fundContract(address(mockToken), STARTING_BALANCE_OF_ADMINS);
@@ -125,26 +115,16 @@ contract TestMultiSig is Test {
         address attacker = makeAddr("attacker");
         vm.expectRevert(MultiSig.MultiSig__OnlyAdminAllowed.selector);
         vm.prank(attacker);
-        multiSig.proposeWithdrawal(
-            address(mockToken),
-            attacker,
-            DEPOSIT_AMOUNT,
-            "Funds need for charity donation"
-        );
+        multiSig.proposeWithdrawal(address(mockToken), attacker, DEPOSIT_AMOUNT, "Funds need for charity donation");
     }
 
-    function testRevertTokenNotAllowedWithdrawalProposal(
-        uint256 _addressIndex
-    ) public {
+    function testRevertTokenNotAllowedWithdrawalProposal(uint256 _addressIndex) public {
         uint256 index = bound(_addressIndex, 0, adminsAddress.length - 1);
         address sender = adminsAddress[index];
         vm.expectRevert(MultiSig.MultiSig__TokenIsNotAllowed.selector);
         vm.prank(sender);
         multiSig.proposeWithdrawal(
-            address(mockToken),
-            CHARITY_RECEIVER,
-            DEPOSIT_AMOUNT,
-            "Funds need for charity donation"
+            address(mockToken), CHARITY_RECEIVER, DEPOSIT_AMOUNT, "Funds need for charity donation"
         );
     }
 
@@ -156,10 +136,7 @@ contract TestMultiSig is Test {
         vm.expectRevert(MultiSig.MultiSig__NotEnoughTokenBalance.selector);
         vm.prank(sender);
         multiSig.proposeWithdrawal(
-            address(mockToken),
-            CHARITY_RECEIVER,
-            STARTING_BALANCE_OF_ADMINS,
-            "Funds need for charity donation"
+            address(mockToken), CHARITY_RECEIVER, STARTING_BALANCE_OF_ADMINS, "Funds need for charity donation"
         );
     }
 
@@ -170,10 +147,7 @@ contract TestMultiSig is Test {
         depositToken(sender, DEPOSIT_AMOUNT);
         vm.prank(sender);
         multiSig.proposeWithdrawal(
-            address(mockToken),
-            CHARITY_RECEIVER,
-            DEPOSIT_AMOUNT,
-            "Funds need for charity donation"
+            address(mockToken), CHARITY_RECEIVER, DEPOSIT_AMOUNT, "Funds need for charity donation"
         );
         assertEq(multiSig.getIsThereActiveProposal(), true);
         assertEq(multiSig.getAllWithdrawalProposal().length, 1);
@@ -186,21 +160,11 @@ contract TestMultiSig is Test {
         depositToken(sender, DEPOSIT_AMOUNT);
         vm.prank(sender);
         multiSig.proposeWithdrawal(
-            address(mockToken),
-            CHARITY_RECEIVER,
-            DEPOSIT_AMOUNT,
-            "Funds need for charity donation"
+            address(mockToken), CHARITY_RECEIVER, DEPOSIT_AMOUNT, "Funds need for charity donation"
         );
-        bytes32 currentWithdrawlProposalId = multiSig
-            .getActiveWithdrawalProposal();
-        bytes32 expectedProposal = keccak256(
-            abi.encode(multiSig.getAllWithdrawalProposal()[0])
-        );
-        bytes32 result = keccak256(
-            abi.encode(
-                multiSig.getWithdrawalProposal(currentWithdrawlProposalId)
-            )
-        );
+        bytes32 currentWithdrawlProposalId = multiSig.getActiveWithdrawalProposal();
+        bytes32 expectedProposal = keccak256(abi.encode(multiSig.getAllWithdrawalProposal()[0]));
+        bytes32 result = keccak256(abi.encode(multiSig.getWithdrawalProposal(currentWithdrawlProposalId)));
         assertEq(expectedProposal, result);
     }
 
@@ -211,18 +175,10 @@ contract TestMultiSig is Test {
         depositToken(sender, DEPOSIT_AMOUNT);
         vm.startPrank(sender);
         multiSig.proposeWithdrawal(
-            address(mockToken),
-            CHARITY_RECEIVER,
-            DEPOSIT_AMOUNT,
-            "Funds need for charity donation"
+            address(mockToken), CHARITY_RECEIVER, DEPOSIT_AMOUNT, "Funds need for charity donation"
         );
         vm.expectRevert(MultiSig.MultiSig__ThereisActiveProposal.selector);
-        multiSig.proposeWithdrawal(
-            address(mockToken),
-            CHARITY_RECEIVER,
-            DEPOSIT_AMOUNT,
-            "Need to go for shopping"
-        );
+        multiSig.proposeWithdrawal(address(mockToken), CHARITY_RECEIVER, DEPOSIT_AMOUNT, "Need to go for shopping");
         vm.stopPrank();
     }
 
@@ -231,9 +187,7 @@ contract TestMultiSig is Test {
         address sender = adminsAddress[index];
         tokenAdd(sender);
         depositToken(sender, DEPOSIT_AMOUNT);
-        uint256 contractBalance = multiSig.getTokenBalanceInContract(
-            address(mockToken)
-        );
+        uint256 contractBalance = multiSig.getTokenBalanceInContract(address(mockToken));
         assertEq(contractBalance, DEPOSIT_AMOUNT);
     }
 
@@ -263,12 +217,8 @@ contract TestMultiSig is Test {
         vm.prank(adminsAddress[dynamicVoter]);
         multiSig.voteOnWithdrawalProposal(proposalId, true);
 
-        bool voted = multiSig.getAddressAlreadyVoted(
-            proposalId,
-            adminsAddress[dynamicVoter]
-        );
-        MultiSig.WithdrawalProposal memory currentProposal = multiSig
-            .getWithdrawalProposal(proposalId);
+        bool voted = multiSig.getAddressAlreadyVoted(proposalId, adminsAddress[dynamicVoter]);
+        MultiSig.WithdrawalProposal memory currentProposal = multiSig.getWithdrawalProposal(proposalId);
 
         assertEq(voted, true);
         assertEq(currentProposal.yesVote[0], adminsAddress[dynamicVoter]);
@@ -327,9 +277,7 @@ contract TestMultiSig is Test {
     }
 
     function testYesVotePassed() public {
-        uint256 startingBalance = ERC20Mock(mockToken).balanceOf(
-            CHARITY_RECEIVER
-        );
+        uint256 startingBalance = ERC20Mock(mockToken).balanceOf(CHARITY_RECEIVER);
         tokenAdd(adminsAddress[0]);
         depositToken(adminsAddress[0], DEPOSIT_AMOUNT);
         proposeWithdrawal(adminsAddress[0]);
@@ -342,11 +290,8 @@ contract TestMultiSig is Test {
         vm.prank(adminsAddress[0]);
         multiSig.resolveWithdrawalProposal(latestProposalId);
         uint256 expectedBalance = startingBalance + DEPOSIT_AMOUNT;
-        uint256 resultBalance = ERC20Mock(mockToken).balanceOf(
-            CHARITY_RECEIVER
-        );
-        MultiSig.WithdrawalProposal memory proposal = multiSig
-            .getWithdrawalProposal(latestProposalId);
+        uint256 resultBalance = ERC20Mock(mockToken).balanceOf(CHARITY_RECEIVER);
+        MultiSig.WithdrawalProposal memory proposal = multiSig.getWithdrawalProposal(latestProposalId);
         bool activeProposal = multiSig.getIsThereActiveProposal();
         assertEq(expectedBalance, resultBalance);
         assertEq(multiSig.getTokenBalanceInContract(mockToken), 0);
@@ -355,9 +300,7 @@ contract TestMultiSig is Test {
     }
 
     function testNoVotePassed() public {
-        uint256 startingBalance = ERC20Mock(mockToken).balanceOf(
-            CHARITY_RECEIVER
-        );
+        uint256 startingBalance = ERC20Mock(mockToken).balanceOf(CHARITY_RECEIVER);
         tokenAdd(adminsAddress[0]);
         depositToken(adminsAddress[0], DEPOSIT_AMOUNT);
         proposeWithdrawal(adminsAddress[0]);
@@ -369,17 +312,12 @@ contract TestMultiSig is Test {
         vm.warp(block.timestamp + 3 days);
         vm.prank(adminsAddress[0]);
         multiSig.resolveWithdrawalProposal(latestProposalId);
-        assertEq(
-            startingBalance,
-            ERC20Mock(mockToken).balanceOf(CHARITY_RECEIVER)
-        );
+        assertEq(startingBalance, ERC20Mock(mockToken).balanceOf(CHARITY_RECEIVER));
         assertEq(multiSig.getTokenBalanceInContract(mockToken), DEPOSIT_AMOUNT);
     }
 
     function testMixedVoting() public {
-        uint256 startingBalance = ERC20Mock(mockToken).balanceOf(
-            CHARITY_RECEIVER
-        );
+        uint256 startingBalance = ERC20Mock(mockToken).balanceOf(CHARITY_RECEIVER);
         tokenAdd(adminsAddress[0]);
         depositToken(adminsAddress[0], DEPOSIT_AMOUNT);
         proposeWithdrawal(adminsAddress[0]);
@@ -391,10 +329,7 @@ contract TestMultiSig is Test {
         vm.warp(block.timestamp + 3 days);
         vm.prank(adminsAddress[0]);
         multiSig.resolveWithdrawalProposal(latestProposalId);
-        assertEq(
-            startingBalance,
-            ERC20Mock(mockToken).balanceOf(CHARITY_RECEIVER)
-        );
+        assertEq(startingBalance, ERC20Mock(mockToken).balanceOf(CHARITY_RECEIVER));
         assertEq(multiSig.getTokenBalanceInContract(mockToken), DEPOSIT_AMOUNT);
     }
 }

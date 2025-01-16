@@ -1,5 +1,6 @@
 //SPDX-License-Identifier:MIT
 pragma solidity >=0.8.0 <0.9.0;
+
 import {Script} from "forge-std/Script.sol";
 import {DevOpsTools} from "@foundry-dev-ops/DevOpsTools.sol";
 import {MultiSig} from "../../src/MultiSig.sol";
@@ -13,20 +14,15 @@ contract FundMultiSig is Script {
         amount = _amount;
     }
 
-    function fundMultiSig(
-        address _multiSig,
-        address _tokenContract,
-        uint256 _fundAmount
-    ) internal {
+    function fundMultiSig(address _multiSig) public {
         vm.startBroadcast();
-        MultiSig(_multiSig).fundContract(_tokenContract, _fundAmount);
+        MultiSig(_multiSig).fundContract(tokenAddress, amount);
         vm.stopBroadcast();
     }
 
     function run() external {
-        address latestDeploymentAddress = DevOpsTools
-            .get_most_recent_deployment("MultiSig", block.chainid);
-        fundMultiSig(latestDeploymentAddress, tokenAddress, amount);
+        address latestDeploymentAddress = DevOpsTools.get_most_recent_deployment("MultiSig", block.chainid);
+        fundMultiSig(latestDeploymentAddress);
     }
 }
 
@@ -37,20 +33,16 @@ contract MultiSigAddAsset is Script {
         newAssetAddress = _newAssetAddress;
     }
 
-    function addAsset(
-        address _contractAddress,
-        address _newAssetContractAddress
-    ) internal {
+    function addAsset(address _contractAddress) public {
         vm.startBroadcast();
-        MultiSig(_contractAddress).addNewAssetAllowed(_newAssetContractAddress);
+        MultiSig(_contractAddress).addNewAssetAllowed(newAssetAddress);
 
         vm.stopBroadcast();
     }
 
     function run() external {
-        address latestDeploymentAddress = DevOpsTools
-            .get_most_recent_deployment("MultiSig", block.chainid);
-        addAsset(latestDeploymentAddress, newAssetAddress);
+        address latestDeploymentAddress = DevOpsTools.get_most_recent_deployment("MultiSig", block.chainid);
+        addAsset(latestDeploymentAddress);
     }
 }
 
@@ -60,45 +52,22 @@ contract MultiSigWithdrawalPropsal is Script {
     uint256 immutable amount;
     string message;
 
-    constructor(
-        address _tokenContractAddress,
-        address _to,
-        uint256 _amount,
-        string memory _message
-    ) {
+    constructor(address _tokenContractAddress, address _to, uint256 _amount, string memory _message) {
         tokenContractAddress = _tokenContractAddress;
         to = _to;
         amount = _amount;
         message = _message;
     }
 
-    function proposal(
-        address _contractAddress,
-        address _tokenContractAddress,
-        address _to,
-        uint256 _amount,
-        string memory _message
-    ) internal {
+    function proposal(address _contractAddress) public {
         vm.startBroadcast();
-        MultiSig(_contractAddress).proposeWithdrawal(
-            _tokenContractAddress,
-            _to,
-            _amount,
-            _message
-        );
+        MultiSig(_contractAddress).proposeWithdrawal(tokenContractAddress, to, amount, message);
         vm.stopBroadcast();
     }
 
     function run() external {
-        address latestDeploymentAddress = DevOpsTools
-            .get_most_recent_deployment("MultiSig", block.chainid);
-        proposal(
-            latestDeploymentAddress,
-            tokenContractAddress,
-            to,
-            amount,
-            message
-        );
+        address latestDeploymentAddress = DevOpsTools.get_most_recent_deployment("MultiSig", block.chainid);
+        proposal(latestDeploymentAddress);
     }
 }
 
@@ -111,22 +80,14 @@ contract VoteWithdrawalMultiSig is Script {
         shouldPass = _shouldPass;
     }
 
-    function vote(
-        address _contractAddress,
-        bool _shouldPass,
-        bytes32 _proposalId
-    ) internal {
+    function vote(address _contractAddress, bool _shouldPass, bytes32 _proposalId) public {
         vm.startBroadcast();
-        MultiSig(_contractAddress).voteOnWithdrawalProposal(
-            _proposalId,
-            _shouldPass
-        );
+        MultiSig(_contractAddress).voteOnWithdrawalProposal(_proposalId, _shouldPass);
         vm.stopBroadcast();
     }
 
     function run() external {
-        address latestDeploymentAddress = DevOpsTools
-            .get_most_recent_deployment("MultiSig", block.chainid);
+        address latestDeploymentAddress = DevOpsTools.get_most_recent_deployment("MultiSig", block.chainid);
         vote(latestDeploymentAddress, shouldPass, proposalId);
     }
 }
@@ -138,10 +99,7 @@ contract ResolveMultiSigProposal is Script {
         proposalId = _proposalId;
     }
 
-    function resolveProposal(
-        address _contractAddress,
-        bytes32 _proposalId
-    ) internal {
+    function resolveProposal(address _contractAddress, bytes32 _proposalId) public {
         vm.startBroadcast();
         MultiSig(_contractAddress).resolveWithdrawalProposal(_proposalId);
 
@@ -149,16 +107,14 @@ contract ResolveMultiSigProposal is Script {
     }
 
     function run() external {
-        address latestDeploymentAddress = DevOpsTools
-            .get_most_recent_deployment("MultiSig", block.chainid);
+        address latestDeploymentAddress = DevOpsTools.get_most_recent_deployment("MultiSig", block.chainid);
         resolveProposal(latestDeploymentAddress, proposalId);
     }
 }
 
 contract LatestMultiSigProposal {
     function run() external view returns (bytes32) {
-        address latestDeploymentAddress = DevOpsTools
-            .get_most_recent_deployment("MultiSig", block.chainid);
+        address latestDeploymentAddress = DevOpsTools.get_most_recent_deployment("MultiSig", block.chainid);
 
         return MultiSig(latestDeploymentAddress).getActiveWithdrawalProposal();
     }

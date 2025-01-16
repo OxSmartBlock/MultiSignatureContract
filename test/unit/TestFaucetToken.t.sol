@@ -1,5 +1,6 @@
 //SPDX-License-Identifier:MIT
 pragma solidity >=0.8.0 <0.9.0;
+
 import {FaucetToken} from "../../src/FaucetToken.sol";
 import {DeployFaucetToken} from "../../script/DeployFaucetToken.s.sol";
 import {Test} from "forge-std/Test.sol";

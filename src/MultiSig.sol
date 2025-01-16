@@ -4,16 +4,17 @@ pragma solidity >=0.8.0 <0.9.0;
 import {IERC20} from "@openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 /**
-@author OxSmartBlock
-```
-Details
-This is Multisig contract that is supposed to accept tokens agree by the three admins that controls the contract. 
-New proposal have 3days to pass. 
-The proposer of adding new asset and withdrawal cannot vote to pass any proposal.
-Passed proposal needs two of the three admins to vote yes.
-Tie and higher No vote recorded as proposal not passed
-``
-**/
+ *@title MutiSig Contract
+ @author OxSmartBlock
+ @notice Multisig contract is a contract expected to be own and controlled by three admins.
+ How it works
+ -- Any of the admins is allowed to add ERC20 tokens address that should be allowed for deposit in the contract
+ -- Incase of withdrawal an admin is expected to make a withdrawal proposal
+ -- Withdrawal proposal are voted by the other two admins excluding the proposer of the withdrawal. 
+ -- Withdrawal proposal is considered passed only if two admins vote yes to the proposal 
+ -- Tie in voting is considered proposal not passed and also if the two admins voted no to the proposal
+
+ */
 
 contract MultiSig {
     error MultiSig__TokenIsNotAllowed();
@@ -72,15 +73,11 @@ contract MultiSig {
     bytes32 private s_activeWithdrwalProposal;
     uint256 constant PROPOSAL_WAIT_TIME = 3 days;
 
-    /**
-     *
-     * @dev modifiers
-     */
+    // Modifiers
 
     /**
-     *
-     * @param _tokenContractAddress ERC20 token contract to be checked if allowed
-     * @dev transaction revert if token is not allowed
+     * @notice modifer check if token is allowed in the contract or not
+     * @param _tokenContractAddress ERC20 token contract address that should be checked
      */
     modifier revertIfTokenNotAllowed(address _tokenContractAddress) {
         if (!s_isTokenAllowed[_tokenContractAddress]) {
@@ -88,9 +85,9 @@ contract MultiSig {
         }
         _;
     }
+
     /**
-     *
-     * @dev modifier checks if there is an active proposal and revert to prevent double proposal
+     * @notice modifier checks if there is an active proposal waiting to be resloved. This prevent double proposal
      */
     modifier revertIfThereIsActiveProposal() {
         if (s_isThereActiveProposal) {
@@ -98,13 +95,18 @@ contract MultiSig {
         }
         _;
     }
-
+    /**
+     * @notice modifier restricts any user calling functions that should only be called by the admins alone
+     */
     modifier revertIfNotAdmin() {
         if (!s_isAdmin[msg.sender]) {
             revert MultiSig__OnlyAdminAllowed();
         }
         _;
     }
+    /**
+     * @notice modifier checks if the contract have enough balance before a withdrawal proposal can be initiated
+     */
 
     modifier revertIfNotEnoughBalance(
         uint256 _amount,
@@ -115,12 +117,18 @@ contract MultiSig {
         }
         _;
     }
+    /**
+     * @notice modifier prevent zero value transactions from going through
+     */
     modifier revertOnZeroValueSent(uint256 _amount) {
         if (_amount == 0) {
             revert MultiSig__ZeroAmountNotAllowed();
         }
         _;
     }
+    /**
+     * @notice modifier checks if user give enough token allowance for transfer to be successful
+     */
     modifier revertIfNotEnoughAllowance(
         uint256 _amount,
         address _tokenContractAddress
@@ -133,13 +141,18 @@ contract MultiSig {
         }
         _;
     }
-
+    /**
+     * @notice modifier checks if the receiver addres is not the zero address
+     */
     modifier revertOnZeroAddress(address _to) {
         if (_to == address(0)) {
             revert MultiSig__InvalidAddress();
         }
         _;
     }
+    /**
+     * @notice modifer check if there is no active proposal prevent admins from voting when there is no proposal
+     */
 
     modifier revertOnNoActiveProposal() {
         if (!s_isThereActiveProposal) {
@@ -147,12 +160,19 @@ contract MultiSig {
         }
         _;
     }
+
+    /**
+     * @notice modifier check if an address already voted to prevent double voting
+     */
     modifier revertOnAddressAlreadyVoted(bytes32 _proposalId) {
         if (s_addressAlreadyVoted[_proposalId][msg.sender]) {
             revert MultiSig__AdressAlreadyVoted();
         }
         _;
     }
+    /**
+     * @notice modifer checks if a proposal have already been passed to prevent voting again
+     */
 
     modifier revertOnProposalAlredyPassed(bytes32 _proposalId) {
         if (s_idToProposal[_proposalId].isProposalPassed) {
@@ -160,12 +180,18 @@ contract MultiSig {
         }
         _;
     }
+    /**
+     * @notice modifier prevent proposer from voting on their proposal
+     */
     modifier revertOnProposerVoting(bytes32 _proposalId) {
         if (s_idToProposal[_proposalId].proposer == msg.sender) {
             revert MultiSig__AddressCannotVoteOnProposedProposal();
         }
         _;
     }
+    /**
+     * @notice modifer checks if the function call is the proposer
+     */
 
     modifier revertIfNotProposer(bytes32 _proposalId) {
         if (msg.sender != s_idToProposal[_proposalId].proposer) {
@@ -173,6 +199,9 @@ contract MultiSig {
         }
         _;
     }
+    /**
+     * @notice modifer prevent closing proposal when voting time is not over
+     */
     modifier revertVotingTimeIsOpen(bytes32 _proposalId) {
         if (
             (block.timestamp - s_idToProposal[_proposalId].timeProposed) <
@@ -182,6 +211,9 @@ contract MultiSig {
         }
         _;
     }
+    /**
+     * @notice modifier makes sure all admins voted before proposal is passed
+     */
 
     modifier revertIfAllAdminNotVoted(bytes32 _proposalId) {
         WithdrawalProposal memory proposal = s_idToProposal[_proposalId];
@@ -202,6 +234,18 @@ contract MultiSig {
             s_isAdmin[_admins[i]] = true;
         }
     }
+
+    //External functions
+
+    /**
+     * @param _tokenContractAddress Allowed ERC20 token contract address sender wish to deposit
+     * @param  _amount Amount of token that should be trasnfered from sender to the contract
+     * @dev transaction would revert if token is not allowed by the multisig contract
+     * @dev transaction would revert if amount is zero
+     * @dev trnsaction would revert if not enough allowance is gievn for the transfer
+     * @notice call this function to make token deposit to the contract
+     *
+     */
 
     function fundContract(
         address _tokenContractAddress,
@@ -224,7 +268,16 @@ contract MultiSig {
     }
 
     /**
-     * External functions
+     *@param _tokenContractAddress ERC20 token contract address the proposal need to withdraw
+     @param _to the receiver address if the withdrawal proposal get passed
+     @param _amount Amount the proposer is trying to withdraw from the contract 
+     @param _message Context to the reason why the proposal should be accepted and voted to pass by other admins 
+    @dev transaction would revert if token is not allowed by the multisig contract
+    @dev transaction would revert if there is an active proposal waiting to be passed
+    @dev transaction would revert if sender is an admin
+    @dev transaction would revert if there is not enough balance to cover the withdrawal proposal
+    @dev transaction woukd revert if the receiver address is zero address
+    @notice call function to raise a new withdrawal proposal 
      */
 
     function proposeWithdrawal(

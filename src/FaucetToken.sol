@@ -1,14 +1,16 @@
 //SPDX-License-Identifier:MIT
 
 pragma solidity >=0.8.0 <0.9.0;
+
 import {ERC20} from "@openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 contract FaucetToken is ERC20 {
     error FaucetToken__WaitTimeNotOver();
+
     mapping(address => uint256) s_lastTimeMinted;
     mapping(address => bool) s_firstTime;
     uint256 constant MINIMUM_TIME_WAIT = 1 days;
-    uint256 constant DRIP_AMOUNT = 100 ether;
+    uint256 public constant DRIP_AMOUNT = 100 ether;
 
     constructor() ERC20("Charty Token", "CHR") {}
 
