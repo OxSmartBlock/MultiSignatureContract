@@ -32,6 +32,7 @@ contract MultiSig {
     error MultiSig__OnlyProposerAllowed();
     error MultiSig__ProposalWaitTimeNotOver();
     error MultiSig__AllAdminsNotVoted();
+    error MultiSig__CannotAddAlreadyAllowedToken();
     //Event
 
     event NewWithdrawalProposal(
@@ -222,6 +223,12 @@ contract MultiSig {
         }
         _;
     }
+    modifier revertIfTokenIsAlreadyAllowed(address _tokenContract) {
+        if (s_isTokenAllowed[_tokenContract]) {
+            revert MultiSig__CannotAddAlreadyAllowedToken();
+            _;
+        }
+    }
 
     /**
      *
@@ -293,9 +300,11 @@ contract MultiSig {
         revertIfNotEnoughBalance(_amount, _tokenContractAddress)
         revertOnZeroAddress(_to)
     {
+        // Hasing a new prosal id for uniqueness
         bytes32 newProposalId = keccak256(
             abi.encodePacked(msg.sender, _tokenContractAddress, block.timestamp)
         );
+        // Making an instance of the withdrawal proposal type
         WithdrawalProposal memory newWithdrawalProposal = WithdrawalProposal({
             proposer: msg.sender,
             tokenContractAddress: _tokenContractAddress,
@@ -308,12 +317,29 @@ contract MultiSig {
             isProposalPassed: false,
             message: _message
         });
+        // updating the latest proposal id
         s_activeWithdrwalProposal = newProposalId;
+        // make sure new proposal status is active
         s_isThereActiveProposal = true;
+        // mapping proposal id to the proposal details
         s_idToProposal[newProposalId] = newWithdrawalProposal;
+        // pushing the new proposal object to the list of proposal object
         s_allWithdrawalProposals.push(newWithdrawalProposal);
+        // Loging to show a state have been updated
         emit NewWithdrawalProposal(msg.sender, _tokenContractAddress, _amount);
     }
+
+    /**
+     * @param _proposalId The uinqiue proposal id sender is willing to vote on
+     * @param _shouldPass boolen value to indicate if a proposal should pass through or not
+     * @notice true means yes to the proposal, false means no to the proposal
+     * @dev transactiom would revert if there is no active proposal to be voted on
+     * @dev transaction would revert if sender is not an admin
+     * @dev transaction would revert if proposal have already been passed
+     * @dev transacion would revert if the sender already voted
+     * @dev transacton would revrt if the sender is the samething as the proposer
+     * @notice call this function to vote on an active proposal
+     */
 
     function voteOnWithdrawalProposal(
         bytes32 _proposalId,
@@ -335,6 +361,16 @@ contract MultiSig {
         emit VotedOnWithdrawalProposal(msg.sender, _shouldPass);
     }
 
+    /**
+     *
+     * @param _proposalId proposal unique id sender wish to resolve
+     * @dev transaction would revert if there is no active proposal
+     * @dev transaction would revert if voting period is still open
+     * @dev transaction woild revert if all admins have not voted
+     * @dev transaction would revrt if propsal have already been passed
+     * @notice call this function to resolve a pending proposal. Token would be sent if proposal is deemed accepted
+     */
+
     function resolveWithdrawalProposal(
         bytes32 _proposalId
     )
@@ -344,24 +380,43 @@ contract MultiSig {
         revertIfAllAdminNotVoted(_proposalId)
         revertOnProposalAlredyPassed(_proposalId)
     {
+        // Get the instance of the proposal using mapping of the id to proposal type
         WithdrawalProposal memory proposal = s_idToProposal[_proposalId];
+        //updating proposal to  be recorded as passed
         s_idToProposal[_proposalId].isProposalPassed = true;
+        // updating to show that there is not active proposal
         s_isThereActiveProposal = false;
+        // Checking if the number of yes vote is larger than that of the number of no vote
         if (proposal.yesVote.length > proposal.noVote.length) {
+            // Subtracting amount to be sent from the balance of token in contract
             s_tokenToAmount[proposal.tokenContractAddress] -= proposal.amount;
+            // transfering token from contract to the receiving address
             bool isSuccess = IERC20(proposal.tokenContractAddress).transfer(
                 proposal.to,
                 proposal.amount
             );
+            // checking if token transfer was successful or not
             if (!isSuccess) {
                 revert MultiSig__TokenTransferFailed();
             }
         }
     }
 
+    /**
+     *
+     * @param _contractAddress ERC20 token contract address to be added to list of accepted token in contract
+     * @dev transaction would revert if sender is not a member of the admins
+     * @dev transaction would revert if token is already allowed
+     * @notice call this function to add new acceepted asset in the contract
+     */
+
     function addNewAssetAllowed(
         address _contractAddress
-    ) external revertIfNotAdmin {
+    )
+        external
+        revertIfNotAdmin
+        revertIfTokenIsAlreadyAllowed(_contractAddress)
+    {
         s_allowedTokenContracts.push(_contractAddress);
         s_isTokenAllowed[_contractAddress] = true;
     }
@@ -397,9 +452,17 @@ contract MultiSig {
         return s_isTokenAllowed[_contractAddress];
     }
 
+    /**
+     *@notice call function to know if there is an active pending proposal
+     */
     function getIsThereActiveProposal() external view returns (bool) {
         return s_isThereActiveProposal;
     }
+
+    /**
+     *  @param _proposalId the unique id use to identify each proposal proposed
+     * @notice call this function to get the active state of a proposal
+     */
 
     function getWithdrawalProposal(
         bytes32 _proposalId
@@ -407,6 +470,10 @@ contract MultiSig {
         return s_idToProposal[_proposalId];
     }
 
+    /**
+     * @notice call this function to get list of all proposed withdrawal proposal
+     * @dev this does not show the current state of the proposal
+     */
     function getAllWithdrawalProposal()
         external
         view
@@ -415,15 +482,30 @@ contract MultiSig {
         return s_allWithdrawalProposals;
     }
 
+    /**
+     * @notice call this function to get the proposal id of the active proposal
+     */
+
     function getActiveWithdrawalProposal() external view returns (bytes32) {
         return s_activeWithdrwalProposal;
     }
 
+    /**
+     * @param _tokenContractAddress ERC20 token contract address
+     * @notice call this function to get balance of an asset hold by the contract
+     */
     function getTokenBalanceInContract(
         address _tokenContractAddress
     ) external view returns (uint256) {
         return s_tokenToAmount[_tokenContractAddress];
     }
+
+    /**
+     * @param _proposalId the unique id to identify a withdrawal proposal
+     * @param _admin EOA address of member of the admins
+     * @notice call this to know if an admin already voted on a proposal or not
+     * @dev function call would return true if admin voted or not
+     */
 
     function getAddressAlreadyVoted(
         bytes32 _proposalId,
