@@ -1,66 +1,29 @@
-## Foundry
+# MULTI SIGNAUTURE SMARTCONTRACT ACCOUNT
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+## Project Description
 
-Foundry consists of:
+The project is a simulation of wallet/account controlled by three DAOs(Admins) members. The admins controls which assets ERC20s token is accepted by the contract. Withdrawal is done through proposal, an Admin propose withdrawal while the two other admins determines if the withdrawal should pass or not.
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## Project Goal
 
-## Documentation
+The goal of the project is to be beginner friendly and a well documented gauide for beginners this meant to be easy
 
-https://book.getfoundry.sh/
+## Table of content
 
-## Usage
+- [Installation](#installation)
+- [Usage](#usage)
+- [Contributing](#contributing)
+- [License](#license)
+- [Contact Information](#contact-information)
+- [Acknowledgements](#acknowledgements)
 
-### Build
+## Installation
 
-```shell
-$ forge build
-```
+### Prerequisites
 
-### Test
+- Foundry
+follow the foundry documentation to install foundry [Foundry Documentation](https://book.getfoundry.sh/)
 
-```shell
-$ forge test
-```
-
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
-### Deploy
-
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
-
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+**Clone the repository**: 
+```sh git clone https://github.com/OxSmartBlock/MultiSignatureContract.git
+  

@@ -226,8 +226,8 @@ contract MultiSig {
     modifier revertIfTokenIsAlreadyAllowed(address _tokenContract) {
         if (s_isTokenAllowed[_tokenContract]) {
             revert MultiSig__CannotAddAlreadyAllowedToken();
-            _;
         }
+        _;
     }
 
     /**
