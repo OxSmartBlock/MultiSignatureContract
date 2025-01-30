@@ -1,29 +1,15 @@
-# MULTI SIGNAUTURE SMARTCONTRACT ACCOUNT
+# Project title 
+    Multi Signature Contract
 
-## Project Description
+# Description
+    This project simulate a contract controlled by three admin member of a DAO, each member is allowed to add new assets and each member is also allowed to make a withdrawal proposal which can be voted by other two admins if such proposal should pass or not. Note that any admin that make a proposal cannot participate in the voting session.
+# How to install and run 
+    ```sh
+    git https://github.com/OxSmartBlock/MultiSignatureContract.git
+    cd MultiSignatureContract
+    forge install
+    forge build
+    ```
+    
+    
 
-The project is a simulation of wallet/account controlled by three DAOs(Admins) members. The admins controls which assets ERC20s token is accepted by the contract. Withdrawal is done through proposal, an Admin propose withdrawal while the two other admins determines if the withdrawal should pass or not.
-
-## Project Goal
-
-The goal of the project is to be beginner friendly and a well documented gauide for beginners this meant to be easy
-
-## Table of content
-
-- [Installation](#installation)
-- [Usage](#usage)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact Information](#contact-information)
-- [Acknowledgements](#acknowledgements)
-
-## Installation
-
-### Prerequisites
-
-- Foundry
-follow the foundry documentation to install foundry [Foundry Documentation](https://book.getfoundry.sh/)
-
-**Clone the repository**: 
-```sh git clone https://github.com/OxSmartBlock/MultiSignatureContract.git
-  
